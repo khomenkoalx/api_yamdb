@@ -67,7 +67,18 @@ class Review(models.Model):
     )
     text = models.TextField()
     author = models.IntegerField() # TODO - поменять на ссылку на пользователя (on_delete=models.CASCADE)
-    score = models.IntegerField()
+    score = models.SmallIntegerField(
+        validators=[
+            MinValueValidator(
+                limit_value=1,
+                message='Значение должно быть больше ноля'
+            ),
+            MaxValueValidator(
+                limit_value=10,
+                message='Значение должно быть не больше десяти'
+            )
+        ]
+    )
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
