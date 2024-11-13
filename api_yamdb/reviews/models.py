@@ -1,7 +1,10 @@
+from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 
+
+User = get_user_model()
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -24,7 +27,7 @@ class Title(models.Model):
     year = models.SmallIntegerField(
         validators=[
             MinValueValidator(
-                limit_value=1900,
+                limit_value=0,
                 message='Введен слишком маленький год'
             ),
             MaxValueValidator(
@@ -51,7 +54,7 @@ class GenreTitle(models.Model):
     genre = models.ForeignKey(
         Genre,
         related_name='genres',
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True
     )
 
@@ -92,7 +95,7 @@ class Comment(models.Model):
         on_delete=models.CASCADE
     )
     text = models.TextField()
-    author = models.IntegerField() # TODO - поменять на ссылку на пользователя (on_delete=models.CASCADE)
+    author = models.ForeignKey()
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
