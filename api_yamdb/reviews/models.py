@@ -1,6 +1,9 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class Category(models.Model):
@@ -24,11 +27,11 @@ class Title(models.Model):
     year = models.SmallIntegerField(
         validators=[
             MinValueValidator(
-                limit_value=1900,
+                limit_value=0,
                 message='Введен слишком маленький год'
             ),
             MaxValueValidator(
-                limit_value=lambda: timezone.now().year,
+                limit_value=timezone.now().year,
                 message='Год не может быть больше, чем сейчас')]
     )
     category = models.ForeignKey(
@@ -66,7 +69,7 @@ class Review(models.Model):
         on_delete=models.CASCADE
     )
     text = models.TextField()
-    author = models.IntegerField()  # TODO - поменять на ссылку на пользователя (on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     score = models.SmallIntegerField(
         validators=[
             MinValueValidator(
@@ -92,7 +95,7 @@ class Comment(models.Model):
         on_delete=models.CASCADE
     )
     text = models.TextField()
-    author = models.IntegerField()  # TODO - поменять на ссылку на пользователя (on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
