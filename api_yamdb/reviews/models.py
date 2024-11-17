@@ -31,7 +31,7 @@ class Title(models.Model):
                 message='Введен слишком маленький год'
             ),
             MaxValueValidator(
-                limit_value=lambda: timezone.now().year,
+                limit_value=timezone.now().year,
                 message='Год не может быть больше, чем сейчас')]
     )
     category = models.ForeignKey(
@@ -95,7 +95,7 @@ class Comment(models.Model):
         on_delete=models.CASCADE
     )
     text = models.TextField()
-    author = models.ForeignKey()
+    author = models.IntegerField()
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
