@@ -2,6 +2,9 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 User = get_user_model()
@@ -11,7 +14,7 @@ class Category(models.Model):
     slug = models.SlugField(unique=True)
 
     def __str__(self):
-        return self.name
+        return self.slug
 
 
 class Genre(models.Model):
@@ -19,7 +22,7 @@ class Genre(models.Model):
     slug = models.SlugField(unique=True)
 
     def __str__(self):
-        return self.name
+        return self.slug
 
 
 class Title(models.Model):
@@ -34,12 +37,14 @@ class Title(models.Model):
                 limit_value=timezone.now().year,
                 message='Год не может быть больше, чем сейчас')]
     )
+    description = models.TextField(max_length=500, blank=True, null=True)
     category = models.ForeignKey(
         Category,
         related_name='titles',
         on_delete=models.SET_NULL,
         null=True
     )
+    genre = models.ManyToManyField(Genre, through='GenreTitle')
 
     def __str__(self):
         return self.name
@@ -48,7 +53,6 @@ class Title(models.Model):
 class GenreTitle(models.Model):
     title = models.ForeignKey(
         Title,
-        related_name='genres',
         on_delete=models.CASCADE
     )
     genre = models.ForeignKey(
@@ -60,6 +64,9 @@ class GenreTitle(models.Model):
 
     def __str__(self):
         return f'{self.title} - {self.genre}'
+    
+    class Meta:
+        unique_together = ('title', 'genre')
 
 
 class Review(models.Model):
