@@ -31,7 +31,7 @@ class Title(models.Model):
                 message='Введен слишком маленький год'
             ),
             MaxValueValidator(
-                limit_value=lambda: timezone.now().year,
+                limit_value=timezone.now().year,
                 message='Год не может быть больше, чем сейчас')]
     )
     category = models.ForeignKey(
@@ -69,7 +69,7 @@ class Review(models.Model):
         on_delete=models.CASCADE
     )
     text = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE) # TODO - поменять на ссылку на пользователя (on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     score = models.SmallIntegerField(
         validators=[
             MinValueValidator(
