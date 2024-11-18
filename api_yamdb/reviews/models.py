@@ -69,7 +69,7 @@ class Review(models.Model):
         on_delete=models.CASCADE
     )
     text = models.TextField()
-    author = models.IntegerField() # TODO - поменять на ссылку на пользователя (on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE) # TODO - поменять на ссылку на пользователя (on_delete=models.CASCADE)
     score = models.SmallIntegerField(
         validators=[
             MinValueValidator(
@@ -95,7 +95,7 @@ class Comment(models.Model):
         on_delete=models.CASCADE
     )
     text = models.TextField()
-    author = models.ForeignKey()
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
