@@ -18,14 +18,22 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleSafeSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
-    rating = serializers.SerializerMethodField() 
+    rating = serializers.SerializerMethodField()
 
     def get_rating(self, obj):
         return obj.rating
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category', 'rating')
+        fields = (
+            'id',
+            'name',
+            'year',
+            'description',
+            'genre',
+            'category',
+            'rating'
+        )
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -45,7 +53,15 @@ class TitleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category', 'rating')
+        fields = (
+            'id',
+            'name',
+            'year',
+            'description',
+            'genre',
+            'category',
+            'rating'
+        )
         optional_fields = ('description',)
 
 
@@ -66,7 +82,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         author = self.context['request'].user
-        title_id = self.context['request'].parser_context['kwargs'].get('title_id')
+        title_id = self.context['request'].parser_context['kwargs'].get(
+            'title_id'
+        )
         title = get_object_or_404(Title, id=title_id)
         if (self.context['request'].method == 'POST'
                 and title.reviews.filter(author=author).exists()):

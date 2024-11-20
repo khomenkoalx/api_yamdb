@@ -6,7 +6,9 @@ class SignUpSerializer(serializers.Serializer):
     username = serializers.RegexField(
         regex=r'^[\w.@+-]+\Z',
         max_length=150,
-        error_messages={"invalid": "Недопустимые символы в имени пользователя."},
+        error_messages={
+            "invalid": "Недопустимые символы в имени пользователя."
+        },
         required=True
     )
     email = serializers.EmailField(
@@ -51,11 +53,25 @@ class UserMeProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'bio', 'role')
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role'
+        )
         read_only_fields = ('email', 'role')
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'bio', 'role')
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role'
+        )

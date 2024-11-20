@@ -1,17 +1,23 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.filters import SearchFilter
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from users.serializers import SignUpSerializer, UserMeProfileSerializer, TokenSerializer, UserSerializer
-from rest_framework_simplejwt.tokens import AccessToken
-from api.permissions import IsAdmin
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.tokens import AccessToken
+
+from api.permissions import IsAdmin
+from users.serializers import (
+    SignUpSerializer,
+    UserMeProfileSerializer,
+    TokenSerializer,
+    UserSerializer
+)
 
 User = get_user_model()
 
@@ -37,7 +43,8 @@ class AuthViewSet(viewsets.ViewSet):
         if existing_user:
             if existing_user.email != email:
                 return Response(
-                    {"username": "Пользователь с таким username уже существует."},
+                    {"username":
+                     "Пользователь с таким username уже существует."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -66,7 +73,11 @@ class AuthViewSet(viewsets.ViewSet):
         user = get_object_or_404(User, username=username)
 
         if not default_token_generator.check_token(user, confirmation_code):
-            return Response({"detail": "Неверный код подтверждения"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail":
+                 "Неверный код подтверждения"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         access_token = AccessToken.for_user(user)
         return Response({
@@ -102,7 +113,11 @@ class UserViewSet(ModelViewSet):
             return Response(serializer.data)
 
         if request.method == 'PATCH':
-            serializer = UserMeProfileSerializer(user, data=request.data, partial=True)
+            serializer = UserMeProfileSerializer(
+                user,
+                data=request.data,
+                partial=True
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

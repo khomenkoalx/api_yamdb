@@ -3,6 +3,7 @@ import pandas as pd
 from django.core.management import BaseCommand
 from django.apps import apps
 
+
 class Command(BaseCommand):
     help = """Import of CSV data and creation/updating of model objects.
     This command takes only one CSV file and model name at a time."""
@@ -16,7 +17,11 @@ class Command(BaseCommand):
         model_name = kwargs.get('model')
 
         if not file_path or not model_name:
-            self.stdout.write(self.style.ERROR('Необходимо указать путь (--path) и модель (--model)'))
+            self.stdout.write(
+                self.style.ERROR(
+                    'Необходимо указать путь (--path)'' и модель (--model)'
+                )
+            )
             return
 
         if not os.path.exists(file_path):
@@ -44,7 +49,11 @@ class Command(BaseCommand):
             else:
                 return apps.get_model('reviews', model_name)
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Модель {model_name} не удалось найти. Ошибка: {e}'))
+            self.stdout.write(
+                self.style.ERROR(
+                    f'Модель {model_name} не удалось найти. Ошибка: {e}'
+                )
+            )
             return None
 
     def read_csv(self, file_path):
@@ -52,7 +61,11 @@ class Command(BaseCommand):
         try:
             return pd.read_csv(file_path)
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Ошибка при чтении файла: {e}'))
+            self.stdout.write(
+                self.style.ERROR(
+                    f'Ошибка при чтении файла: {e}'
+                )
+            )
             return None
 
     def process_row(self, row, model):
@@ -62,7 +75,9 @@ class Command(BaseCommand):
             field_name = field.name
 
             if field.is_relation:
-                data[field_name] = self.get_related_object(field, field_name, row)
+                data[field_name] = self.get_related_object(
+                    field, field_name, row
+                )
             elif field_name in row:
                 data[field_name] = row[field_name]
 
@@ -72,11 +87,8 @@ class Command(BaseCommand):
         """Handle related fields, considering _id suffix and field name."""
         related_field_name = f'{field_name}_id'
 
-        # Check for _id field first
         if related_field_name in row:
             return field.related_model.objects.get(id=row[related_field_name])
-
-        # Otherwise, check for the field name itself
         elif field_name in row:
             return field.related_model.objects.get(id=row[field_name])
 
@@ -87,8 +99,20 @@ class Command(BaseCommand):
         try:
             obj, created = model.objects.update_or_create(**data)
             if created:
-                self.stdout.write(self.style.SUCCESS(f'Создан объект {model.__name__}: {obj}'))
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Создан объект {model.__name__}: {obj}'
+                    )
+                )
             else:
-                self.stdout.write(self.style.SUCCESS(f'Обновлен объект {model.__name__}: {obj}'))
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Обновлен объект {model.__name__}: {obj}'
+                    )
+                )
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Ошибка при сохранении объекта {model.__name__}: {e}'))
+            self.stdout.write(
+                self.style.ERROR(
+                    f'Ошибка при сохранении объекта {model.__name__}: {e}'
+                )
+            )
