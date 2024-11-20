@@ -1,40 +1,32 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAdmin(BasePermission):
+
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
-            request.user.role == 'admin' or request.user.is_superuser
+            request.user.is_admin
+            or request.user.is_staff
+            or request.user.is_superuser
         )
 
 
-class IsModerator(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and (
-            request.user.role == 'moderator' or request.user.is_superuser
-        )
-
-
-class IsAdminOrReadOnly(BasePermission):
-    def has_permission(self, request, view):
-        return request.method in SAFE_METHODS or (
-            request.user.is_authenticated and (
-                request.user.role == 'admin' or request.user.is_superuser
-            )
-        )
-
-
-class ReviewsAndCommentsPermission(BasePermission):
-    def has_permission(self, request, view):
-        if request.method in SAFE_METHODS or (
-            request.user.is_authenticated
-        ):
-            return True
-        return False
+class IsAdminModeratorAuthorOrReadOnly(BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        return obj.author == request.user or (
-            request.user.role in ('admin', 'moderator') or (
-                request.user.is_superuser
-            )
-        )
+        if request.method in SAFE_METHODS:
+            return True
+        if request.method == 'POST':
+            return request.user.is_authenticated
+        return (request.user.is_authenticated and (
+            request.user == obj.author
+            or request.user.is_moderator
+            or request.user.is_admin
+        ))
+
+
+class IsAdminUserOrReadOnly(BasePermission):
+
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS or (
+            request.user.is_authenticated and request.user.is_admin)
