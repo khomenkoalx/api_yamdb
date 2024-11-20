@@ -8,9 +8,6 @@ from django.db.models import Avg
 
 User = get_user_model()
 
-
-User = get_user_model()
-
 class Category(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
@@ -110,7 +107,6 @@ class Review(models.Model):
         return self.text[:15]
 
 
-
 class Comment(models.Model):
     review = models.ForeignKey(
         Review,
@@ -122,4 +118,4 @@ class Comment(models.Model):
     pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.text[15:]
+        return self.text[:15]
