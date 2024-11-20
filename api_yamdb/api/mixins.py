@@ -6,8 +6,6 @@ from rest_framework.mixins import (
     CreateModelMixin
 )
 
-from .permissions import IsAdminOrReadOnly
-
 
 class SearchableViewSet(
     viewsets.GenericViewSet,
@@ -18,4 +16,3 @@ class SearchableViewSet(
     filter_backends = (SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
-    permission_classes = (IsAdminOrReadOnly,)
