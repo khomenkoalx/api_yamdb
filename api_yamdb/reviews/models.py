@@ -3,6 +3,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.db.models import Avg
+
 
 User = get_user_model()
 
@@ -46,6 +48,11 @@ class Title(models.Model):
     )
     genre = models.ManyToManyField(Genre, through='GenreTitle')
 
+    @property
+    def rating(self):
+        reviews = self.reviews.aggregate(Avg('score'))
+        return reviews['score__avg']
+
     def __str__(self):
         return self.name
 
@@ -72,27 +79,36 @@ class GenreTitle(models.Model):
 class Review(models.Model):
     title = models.ForeignKey(
         Title,
-        related_name='reviews',
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='reviews'
     )
     text = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    score = models.SmallIntegerField(
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+    )
+    score = models.IntegerField(
+        null=True,
         validators=[
-            MinValueValidator(
-                limit_value=1,
-                message='Значение должно быть больше ноля'
-            ),
-            MaxValueValidator(
-                limit_value=10,
-                message='Значение должно быть не больше десяти'
-            )
+            MaxValueValidator(10, message='Оценка должна быть не выше 10'),
+            MinValueValidator(1, message='Оценка должна быть не ниже 1')
         ]
     )
-    pub_date = models.DateTimeField(auto_now_add=True)
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+
+    class Meta:
+        ordering = ['pub_date']
+        verbose_name = 'Обзор'
+        verbose_name_plural = 'Обзоры'
+        constraints = [
+            models.UniqueConstraint(fields=['author', 'title'],
+                                    name='unique_review')
+        ]
 
     def __str__(self):
-        return self.text[15:]
+        return self.text[:15]
+
 
 
 class Comment(models.Model):
