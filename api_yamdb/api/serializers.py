@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+
 from reviews.models import Category, Genre, Title, Review, Comment
 
 
@@ -18,10 +19,7 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleSafeSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
-    rating = serializers.SerializerMethodField()
-
-    def get_rating(self, obj):
-        return obj.rating
+    rating = serializers.ReadOnlyField()
 
     class Meta:
         model = Title
@@ -29,10 +27,19 @@ class TitleSafeSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'year',
+            'rating',
             'description',
             'genre',
             'category',
-            'rating'
+        )
+        read_only_fields = (
+            'id',
+            'name',
+            'year',
+            'rating',
+            'description',
+            'genre',
+            'category',
         )
 
 
@@ -46,23 +53,21 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
-    rating = serializers.SerializerMethodField()
 
-    def get_rating(self, obj):
-        return obj.rating
+    def to_representation(self, instance):
+        if instance:
+            serializer = TitleSafeSerializer(instance)
+        return serializer.data
 
     class Meta:
         model = Title
         fields = (
-            'id',
             'name',
             'year',
             'description',
             'genre',
             'category',
-            'rating'
         )
-        optional_fields = ('description',)
 
 
 class ReviewSerializer(serializers.ModelSerializer):
