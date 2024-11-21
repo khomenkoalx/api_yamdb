@@ -7,6 +7,8 @@ from rest_framework.permissions import SAFE_METHODS
 from reviews.models import Category, Genre, Title, Review
 from .filters import TitleFilter
 from .mixins import SearchableViewSet
+from .permissions import (IsAdminModeratorAuthorOrReadOnly,
+                          IsAdminUserOrReadOnly)
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -15,8 +17,6 @@ from .serializers import (
     ReviewSerializer,
     CommentSerializer,
 )
-from .permissions import (IsAdminModeratorAuthorOrReadOnly,
-                          IsAdminUserOrReadOnly)
 
 
 class CategoryViewSet(SearchableViewSet, viewsets.GenericViewSet):
@@ -46,6 +46,7 @@ class TitleViewSet(viewsets.ModelViewSet):
                 rating=Avg('reviews__score')
         )
         return titles
+
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer

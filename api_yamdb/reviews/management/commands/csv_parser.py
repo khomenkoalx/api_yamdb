@@ -18,7 +18,9 @@ class Command(BaseCommand):
 
         if not file_path or not model_name:
             self.stdout.write(
-                self.style.ERROR('Необходимо указать путь (--path) и модель (--model)')
+                self.style.ERROR(
+                    'Необходимо указать путь (--path) и модель (--model)'
+                )
             )
             return
 
@@ -69,6 +71,7 @@ class Command(BaseCommand):
                 )
             )
             return None
+
     def process_mtm_table(self, file_df, model_name):
         """Handle MTM relationships by populating the through table."""
         if model_name == 'GenreTitle':
@@ -81,7 +84,8 @@ class Command(BaseCommand):
                     title.genre.add(genre)
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f'Связь добавлена: Title {title.id} - Genre {genre.id}'
+                            f'Связь добавлена: Title {title.id} - '
+                            f'Genre {genre.id}'
                         )
                     )
                 except Exception as e:
