@@ -18,9 +18,7 @@ class Command(BaseCommand):
 
         if not file_path or not model_name:
             self.stdout.write(
-                self.style.ERROR(
-                    'Необходимо указать путь (--path)'' и модель (--model)'
-                )
+                self.style.ERROR('Необходимо указать путь (--path) и модель (--model)')
             )
             return
 
@@ -28,15 +26,19 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Файл {file_path} не найден'))
             return
 
-        model = self.get_model(model_name)
-        if not model:
-            return
-
         file_df = self.read_csv(file_path)
         if file_df is None:
             return
 
-        for index, row in file_df.iterrows():
+        if model_name == 'GenreTitle':
+            self.process_mtm_table(file_df, model_name)
+            return
+
+        model = self.get_model(model_name)
+        if not model:
+            return
+
+        for _, row in file_df.iterrows():
             data = self.process_row(row, model)
             if data:
                 self.save_model_object(data, model)
@@ -67,6 +69,25 @@ class Command(BaseCommand):
                 )
             )
             return None
+    def process_mtm_table(self, file_df, model_name):
+        """Handle MTM relationships by populating the through table."""
+        if model_name == 'GenreTitle':
+            title_model = apps.get_model('reviews', 'Title')
+            genre_model = apps.get_model('reviews', 'Genre')
+            for _, row in file_df.iterrows():
+                try:
+                    title = title_model.objects.get(id=row['title_id'])
+                    genre = genre_model.objects.get(id=row['genre_id'])
+                    title.genre.add(genre)
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f'Связь добавлена: Title {title.id} - Genre {genre.id}'
+                        )
+                    )
+                except Exception as e:
+                    self.stdout.write(
+                        self.style.ERROR(f'Ошибка: {e}')
+                    )
 
     def process_row(self, row, model):
         """Process a single row of CSV data and return the model data."""
