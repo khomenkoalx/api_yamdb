@@ -26,7 +26,6 @@ class BaseReviewCommentModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.text[:settings.MAX_STR_LENGTH]

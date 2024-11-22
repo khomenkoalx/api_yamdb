@@ -71,6 +71,7 @@ class Review(BaseReviewCommentModel):
     )
 
     class Meta:
+        ordering = ('-pub_date',)
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
@@ -90,5 +91,6 @@ class Comment(BaseReviewCommentModel):
     )
 
     class Meta:
+        ordering = ('pub_date',)
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
