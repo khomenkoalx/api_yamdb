@@ -5,7 +5,11 @@ from .views import (
     GenreViewSet,
     TitleViewSet,
     ReviewViewSet,
-    CommentViewSet
+    CommentViewSet,
+    signup,
+    get_token,
+    me,
+    UserViewSet
 )
 
 
@@ -23,7 +27,11 @@ v1_router.register(
     CommentViewSet,
     basename='comments'
 )
+v1_router.register(r'users', UserViewSet, basename='users')
 
 urlpatterns = [
+    path('v1/users/me/', me, name='me'),
     path('v1/', include(v1_router.urls)),
+    path('v1/auth/signup/', signup, name='signup'),
+    path('v1/auth/token/', get_token, name='token'),
 ]

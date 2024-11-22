@@ -33,6 +33,7 @@ pip install -r requirements.txt
 Перейдите в корневую директорию проекта и выполните миграции
 ```bash
 cd api_yamdb
+django-admin compilemessages
 python manage.py migrate
 ```
 
