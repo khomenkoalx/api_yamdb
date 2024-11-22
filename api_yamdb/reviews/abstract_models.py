@@ -3,7 +3,10 @@ from django.db import models
 
 
 class BaseModel(models.Model):
-    name = models.CharField(max_length=settings.NAME_MAX_LENGTH, verbose_name='Название')
+    name = models.CharField(
+        max_length=settings.NAME_MAX_LENGTH,
+        verbose_name='Название'
+    )
     slug = models.SlugField(unique=True, verbose_name='Слаг')
 
     class Meta:
@@ -22,7 +25,10 @@ class BaseReviewCommentModel(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Автор'
     )
-    pub_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата публикации')
+    pub_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата публикации'
+    )
 
     class Meta:
         abstract = True
