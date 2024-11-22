@@ -1,10 +1,10 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
-from .abstract_models import BaseModel, BaseReviewComment
+from .abstract_models import BaseModel, BaseReviewCommentModel
 from .validators import CurrentYearMaxValueValidator
-from .constants import MIN_SCORE, MAX_SCORE
 
 
 User = get_user_model()
@@ -24,7 +24,7 @@ class Genre(BaseModel):
 
 class Title(models.Model):
     name = models.CharField(
-        max_length=255,
+        max_length=settings.NAME_MAX_LENGTH,
         verbose_name='Название'
     )
     year = models.SmallIntegerField(
@@ -55,7 +55,7 @@ class Title(models.Model):
         return self.name
 
 
-class Review(BaseReviewComment):
+class Review(BaseReviewCommentModel):
     title = models.ForeignKey(
         'reviews.Title',
         on_delete=models.CASCADE,
@@ -64,8 +64,8 @@ class Review(BaseReviewComment):
     )
     score = models.IntegerField(
         validators=[
-            MaxValueValidator(MAX_SCORE, f'Оценка не может быть выше {MAX_SCORE}'),
-            MinValueValidator(MIN_SCORE, f'Оценка не может быть ниже {MIN_SCORE}')
+            MaxValueValidator(settings.MAX_SCORE, f'Оценка не может быть выше {settings.MAX_SCORE}'),
+            MinValueValidator(settings.MIN_SCORE, f'Оценка не может быть ниже {settings.MIN_SCORE}')
         ],
         verbose_name='Оценка'
     )
@@ -81,7 +81,7 @@ class Review(BaseReviewComment):
         )
 
 
-class Comment(BaseReviewComment):
+class Comment(BaseReviewCommentModel):
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
@@ -77,9 +78,14 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username'
     )
-
-    def validate_score(self, value):
-        return validate_score(value)
+    score = serializers.IntegerField(
+        min_value=settings.MIN_SCORE,
+        max_value=settings.MAX_SCORE,
+        error_messages={
+            'min_value': f'Оценка должна быть не ниже {settings.MIN_SCORE}',
+            'max_value': f'Оценка должна быть не выше {settings.MAX_SCORE}'
+        }
+    )
 
     def validate(self, data):
         if self.context['request'].method != 'POST':
