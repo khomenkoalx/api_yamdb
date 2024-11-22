@@ -1,12 +1,14 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
-
 from rest_framework import viewsets, permissions
 from rest_framework.permissions import SAFE_METHODS
 
 from reviews.models import Category, Genre, Title, Review
 from .filters import TitleFilter
 from .mixins import SearchableViewSet
+from .permissions import (IsAdminModeratorAuthorOrReadOnly,
+                          IsAdminUserOrReadOnly)
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -15,24 +17,19 @@ from .serializers import (
     ReviewSerializer,
     CommentSerializer,
 )
-from .permissions import (IsAdminModeratorAuthorOrReadOnly,
-                          IsAdminUserOrReadOnly)
 
 
-class CategoryViewSet(SearchableViewSet):
+class CategoryViewSet(SearchableViewSet, viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminUserOrReadOnly,)
 
 
-class GenreViewSet(SearchableViewSet):
+class GenreViewSet(SearchableViewSet, viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminUserOrReadOnly,)
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminUserOrReadOnly,)
@@ -42,6 +39,13 @@ class TitleViewSet(viewsets.ModelViewSet):
         if self.request.method in SAFE_METHODS:
             return TitleSafeSerializer
         return TitleSerializer
+
+    def get_queryset(self):
+        titles = Title.objects.prefetch_related(
+            'reviews').annotate(
+                rating=Avg('reviews__score')
+        )
+        return titles
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

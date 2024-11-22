@@ -1,76 +1,56 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from django.db.models import Avg
-from django.utils import timezone
 
+from .abstract_models import BaseModel
+from .validators import CurrentYearMaxValueValidator
 
 User = get_user_model()
 
 
-class Category(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
-
-    def __str__(self):
-        return self.slug
+class Category(BaseModel):
+    class Meta:
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
 
 
-class Genre(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
-
-    def __str__(self):
-        return self.slug
+class Genre(BaseModel):
+    class Meta:
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'
 
 
 class Title(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(
+        max_length=255,
+        verbose_name='Название'
+    )
     year = models.SmallIntegerField(
+        verbose_name='Год создания',
         validators=[
-            MinValueValidator(
-                limit_value=0,
-                message='Введен слишком маленький год'
-            ),
-            MaxValueValidator(
-                limit_value=timezone.now().year,
+            CurrentYearMaxValueValidator(
                 message='Год не может быть больше, чем сейчас')]
     )
-    description = models.TextField(max_length=500, blank=True, null=True)
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Описание'
+    )
     category = models.ForeignKey(
         Category,
         related_name='titles',
         on_delete=models.SET_NULL,
-        null=True
+        null=True,
+        verbose_name='Категория'
     )
-    genre = models.ManyToManyField(Genre, through='GenreTitle')
-
-    @property
-    def rating(self):
-        reviews = self.reviews.aggregate(Avg('score'))
-        return reviews['score__avg']
+    genre = models.ManyToManyField(
+        Genre,
+        verbose_name='Жанр',
+        related_name='titles'
+    )
 
     def __str__(self):
         return self.name
-
-
-class GenreTitle(models.Model):
-    title = models.ForeignKey(
-        Title,
-        on_delete=models.CASCADE
-    )
-    genre = models.ForeignKey(
-        Genre,
-        related_name='genres',
-        on_delete=models.CASCADE,
-        null=True
-    )
-
-    def __str__(self):
-        return f'{self.title} - {self.genre}'
-
-    class Meta:
-        unique_together = ('title', 'genre')
 
 
 class Review(models.Model):
