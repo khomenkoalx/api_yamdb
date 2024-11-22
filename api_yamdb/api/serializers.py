@@ -3,6 +3,8 @@ from rest_framework import serializers
 
 from reviews.models import Category, Genre, Title, Review, Comment
 
+from .validators import validate_score 
+
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -75,32 +77,28 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username'
     )
-    score = serializers.IntegerField()
-    title = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate_score(self, value):
-        if not (1 <= value <= 10):
-            raise serializers.ValidationError(
-                'Оценка должна быть от 1 до 10'
-            )
-        return value
+        return validate_score(value)
 
     def validate(self, data):
+        if self.context['request'].method != 'POST':
+            return data
+
         author = self.context['request'].user
-        title_id = self.context['request'].parser_context['kwargs'].get(
-            'title_id'
-        )
+        title_id = self.context['request'].parser_context['kwargs'].get('title_id')
         title = get_object_or_404(Title, id=title_id)
-        if (self.context['request'].method == 'POST'
-                and title.reviews.filter(author=author).exists()):
+
+        if title.reviews.filter(author=author).exists():
             raise serializers.ValidationError(
-                f'Отзыв на произведение {title.name} уже существует'
+                f'Отзыв на произведение "{title.name}" уже существует'
             )
         return data
 
     class Meta:
-        fields = '__all__'
         model = Review
+        fields = ('id', 'text', 'author', 'score', 'pub_date', 'title')
+        read_only_fields = ('author', 'pub_date', 'title')
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -108,8 +106,8 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username'
     )
-    review = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Comment
-        fields = '__all__'
+        fields = ('id', 'text', 'author', 'pub_date', 'review')
+        read_only_fields = ('author', 'pub_date', 'review')
