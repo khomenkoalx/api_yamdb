@@ -4,8 +4,8 @@ from rest_framework import serializers
 
 from reviews.models import Category, Genre, Title, Review, Comment
 from reviews.models import User, USERNAME_FIELD_SIZE, EMAIL_FIELD_SIZE
+from reviews.constants import TITLE_READ_ONLY_FIELDS
 
-MYSELF_NAME = 'me'
 CONFORMATION_CODE_SIZE = 128
 
 
@@ -28,24 +28,8 @@ class TitleSafeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = (
-            'id',
-            'name',
-            'year',
-            'rating',
-            'description',
-            'genre',
-            'category',
-        )
-        read_only_fields = (
-            'id',
-            'name',
-            'year',
-            'rating',
-            'description',
-            'genre',
-            'category',
-        )
+        fields = TITLE_READ_ONLY_FIELDS
+        read_only_fields = TITLE_READ_ONLY_FIELDS
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -62,7 +46,8 @@ class TitleSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         if instance:
             serializer = TitleSafeSerializer(instance)
-        return serializer.data
+            return serializer.data
+        return {}
 
     class Meta:
         model = Title
@@ -82,11 +67,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     )
     score = serializers.IntegerField(
         min_value=settings.MIN_SCORE,
-        max_value=settings.MAX_SCORE,
-        error_messages={
-            'min_value': f'Оценка должна быть не ниже {settings.MIN_SCORE}',
-            'max_value': f'Оценка должна быть не выше {settings.MAX_SCORE}'
-        }
+        max_value=settings.MAX_SCORE
     )
 
     def validate(self, data):
@@ -94,9 +75,8 @@ class ReviewSerializer(serializers.ModelSerializer):
             return data
 
         author = self.context['request'].user
-        title_id = self.context['request'].parser_context['kwargs'].get(
-            'title_id'
-        )
+        title_id = self.context['request'].parser_context['kwargs']['title_id']
+
         title = get_object_or_404(Title, id=title_id)
 
         if title.reviews.filter(author=author).exists():
@@ -107,8 +87,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ('id', 'text', 'author', 'score', 'pub_date', 'title')
-        read_only_fields = ('author', 'pub_date', 'title')
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -119,8 +98,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ('id', 'text', 'author', 'pub_date', 'review')
-        read_only_fields = ('author', 'pub_date', 'review')
+        fields = ('id', 'text', 'author', 'pub_date')
 
 
 class SignUpSerializer(serializers.Serializer):
@@ -138,9 +116,9 @@ class SignUpSerializer(serializers.Serializer):
     )
 
     def validate_username(self, username):
-        if username == MYSELF_NAME:
+        if username == settings.MYSELF_NAME:
             raise serializers.ValidationError(
-                f'Имя \'{MYSELF_NAME}\' использовать нельзя.'
+                f'Имя \'{settings.MYSELF_NAME}\' использовать нельзя.'
             )
         return username
 
@@ -156,9 +134,9 @@ class TokenSerializer(serializers.Serializer):
     )
 
     def validate_username(self, username):
-        if username == MYSELF_NAME:
+        if username == settings.MYSELF_NAME:
             raise serializers.ValidationError(
-                f'Имя \'{MYSELF_NAME}\' использовать нельзя.'
+                f'Имя \'{settings.MYSELF_NAME}\' использовать нельзя.'
             )
         return username
 

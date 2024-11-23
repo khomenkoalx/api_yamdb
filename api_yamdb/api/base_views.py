@@ -4,6 +4,7 @@ from rest_framework.mixins import (
     DestroyModelMixin,
     CreateModelMixin
 )
+from rest_framework import viewsets
 
 from .permissions import IsAdminUserOrReadOnly
 
@@ -11,7 +12,8 @@ from .permissions import IsAdminUserOrReadOnly
 class SearchableViewSet(
     CreateModelMixin,
     ListModelMixin,
-    DestroyModelMixin
+    DestroyModelMixin,
+    viewsets.GenericViewSet
 ):
     filter_backends = (SearchFilter,)
     search_fields = ('name',)

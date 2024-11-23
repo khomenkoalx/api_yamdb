@@ -7,10 +7,10 @@
 Александр Хоменко - [@khomenkoalx](https://github.com/khomenkoalx)
 
 ## Использованные технологии
-Python 3.9.13  
-Django 3.2  
-djangorestframework 3.12.4  
-pandas 2.2.3  
+Python3
+Django
+djangorestframework
+pandas
 
 ## Развертывание проекта
 Клонируйте репозиторий и перейдите в директорию api_yamdb
@@ -33,20 +33,13 @@ pip install -r requirements.txt
 Перейдите в корневую директорию проекта и выполните миграции
 ```bash
 cd api_yamdb
-django-admin compilemessages
 python manage.py migrate
 ```
 
 ## Импорт данных
-Для демонстрации работы приложения заготовлены данные в формате **.csv**. Для их импорта в базу данных проекта используйте консольную команду `csv_parser`.
+Для демонстрации работы приложения заготовлены данные в формате **.csv**. Для их импорта в базу данных проекта используйте консольную команду `csv_parser` с относительным адресом папки с файлами в качестве параметра --path.
 ```bash
-python manage.py csv_parser --path static/data/category.csv --model Category
-python manage.py csv_parser --path static/data/genre.csv --model Genre
-python manage.py csv_parser --path static/data/users.csv --model Users
-python manage.py csv_parser --path static/data/titles.csv --model Title
-python manage.py csv_parser --path static/data/genre_title.csv --model GenreTitle
-python manage.py csv_parser --path static/data/review.csv --model Review
-python manage.py csv_parser --path static/data/comments.csv --model Comment
+python manage.py csv_parser --path static/data
 ```
 
 ## Запуск приложения

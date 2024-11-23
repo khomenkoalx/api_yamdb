@@ -3,47 +3,63 @@ import pandas as pd
 from django.core.management import BaseCommand
 from django.apps import apps
 
+file_model_match = {
+    'Category': 'category.csv',
+    'Genre': 'genre.csv',
+    'User': 'users.csv',
+    'Title': 'titles.csv',
+    'GenreTitle': 'genre_title.csv',
+    'Review': 'review.csv',
+    'Comment': 'comments.csv',
+}
+
 
 class Command(BaseCommand):
     help = """Import of CSV data and creation/updating of model objects.
     This command takes only one CSV file and model name at a time."""
 
     def add_arguments(self, parser):
-        parser.add_argument('--path', type=str, help='Path to CSV file')
-        parser.add_argument('--model', type=str, help='Model name to import')
+        parser.add_argument(
+            '--path', type=str, help='Path to folder with CSV files'
+        )
 
     def handle(self, *args, **kwargs):
-        file_path = kwargs.get('path')
-        model_name = kwargs.get('model')
+        folder_path = kwargs.get('path')
 
-        if not file_path or not model_name:
+        if not folder_path:
             self.stdout.write(
                 self.style.ERROR(
-                    'Необходимо указать путь (--path) и модель (--model)'
+                    'Необходимо указать путь (--path)'
                 )
             )
             return
 
-        if not os.path.exists(file_path):
-            self.stdout.write(self.style.ERROR(f'Файл {file_path} не найден'))
+        if not os.path.exists(folder_path):
+            self.stdout.write(
+                self.style.ERROR(f'Директория {folder_path} не найдена')
+            )
             return
 
-        file_df = self.read_csv(file_path)
-        if file_df is None:
-            return
+        for model_name, file_name in file_model_match.items():
+            file_path = os.path.join(folder_path, file_name)
+            file_df = self.read_csv(file_path)
 
-        if model_name == 'GenreTitle':
-            self.process_mtm_table(file_df, model_name)
-            return
+            if file_df is None:
+                self.stdout.write(
+                    self.style.ERROR(f'Файл {file_path} пуст.')
+                )
+                continue
 
-        model = self.get_model(model_name)
-        if not model:
-            return
-
-        for _, row in file_df.iterrows():
-            data = self.process_row(row, model)
-            if data:
-                self.save_model_object(data, model)
+            if model_name == 'GenreTitle':
+                self.process_mtm_table(file_df, model_name)
+            else:
+                model = self.get_model(model_name)
+                if not model:
+                    continue
+                for _, row in file_df.iterrows():
+                    data = self.process_row(row, model)
+                    if data:
+                        self.save_model_object(data, model)
 
     def get_model(self, model_name):
         """Get the model from the app."""
