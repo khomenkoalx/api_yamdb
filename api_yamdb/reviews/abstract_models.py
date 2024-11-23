@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 
-class BaseModel(models.Model):
+class BaseCategoryGenreModel(models.Model):
     name = models.CharField(
         max_length=settings.NAME_MAX_LENGTH,
         verbose_name='Название'
@@ -21,7 +21,7 @@ class BaseModel(models.Model):
 class BaseReviewCommentModel(models.Model):
     text = models.TextField(verbose_name='Текст')
     author = models.ForeignKey(
-        'users.User',
+        'reviews.User',
         on_delete=models.CASCADE,
         verbose_name='Автор'
     )

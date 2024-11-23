@@ -48,10 +48,7 @@ class Command(BaseCommand):
     def get_model(self, model_name):
         """Get the model from the app."""
         try:
-            if model_name == 'User':
-                return apps.get_model('users', 'User')
-            else:
-                return apps.get_model('reviews', model_name)
+            return apps.get_model('reviews', model_name)
         except Exception as e:
             self.stdout.write(
                 self.style.ERROR(

@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from reviews.models import Category, Genre, Title, Review, Comment
-from users.models import User, USERNAME_FIELD_SIZE, EMAIL_FIELD_SIZE
+from reviews.models import User, USERNAME_FIELD_SIZE, EMAIL_FIELD_SIZE
 
 MYSELF_NAME = 'me'
 CONFORMATION_CODE_SIZE = 128

@@ -1,22 +1,81 @@
+from enum import Enum
+
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
-from .abstract_models import BaseModel, BaseReviewCommentModel
+from .abstract_models import BaseCategoryGenreModel, BaseReviewCommentModel
 from .validators import CurrentYearMaxValueValidator
 
 
-User = get_user_model()
+USERNAME_FIELD_SIZE = 150
+EMAIL_FIELD_SIZE = 254
 
 
-class Category(BaseModel):
+class RoleChoices(str, Enum):
+    USER = 'user'
+    MODERATOR = 'moderator'
+    ADMIN = 'admin'
+
+    @classmethod
+    def choices(cls):
+        return [
+            (cls.USER.value, _('user')),
+            (cls.MODERATOR.value, _('moderator')),
+            (cls.ADMIN.value, _('admin')),
+        ]
+
+    @classmethod
+    def max_length(cls):
+        return max(len(role) for role in cls)
+
+
+class User(AbstractUser):
+    username_validator = RegexValidator(
+        regex=r'^[\w.@+-]+\Z',
+        message=(
+            'Username may contain only letters,'
+            ' digits, and @/./+/-/_ characters.'
+        )
+    )
+
+    username = models.CharField(
+        max_length=USERNAME_FIELD_SIZE,
+        unique=True,
+        validators=[username_validator],
+        error_messages={
+            'unique': "A user with that username already exists.",
+        },
+    )
+    email = models.EmailField(unique=True, max_length=EMAIL_FIELD_SIZE)
+    bio = models.TextField(blank=True)
+    role = models.CharField(
+        max_length=RoleChoices.max_length(),
+        choices=RoleChoices.choices(),
+        default=RoleChoices.USER
+    )
+
+    @property
+    def is_admin(self):
+        return (self.role == RoleChoices.ADMIN
+                or self.is_superuser
+                or self.is_staff)
+
+    @property
+    def is_moderator(self):
+        return self.role == RoleChoices.MODERATOR
+
+
+class Category(BaseCategoryGenreModel):
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(BaseModel):
+class Genre(BaseCategoryGenreModel):
     class Meta:
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
@@ -50,6 +109,10 @@ class Title(models.Model):
         verbose_name='Жанр',
         related_name='titles'
     )
+
+    class Meta:
+        verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
 
     def __str__(self):
         return self.name
