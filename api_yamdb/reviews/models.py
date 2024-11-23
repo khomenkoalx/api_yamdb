@@ -1,18 +1,29 @@
 from enum import Enum
 
-from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .abstract_models import BaseCategoryGenreModel, BaseReviewCommentModel
-from .validators import CurrentYearMaxValueValidator
+from .constants import (
+    USERNAME_FIELD_SIZE,
+    EMAIL_FIELD_SIZE,
+    MIN_SCORE,
+    MAX_SCORE,
+    MAX_STR_LENGTH,
+    NAME_MAX_LENGTH
+)
 
 
-USERNAME_FIELD_SIZE = 150
-EMAIL_FIELD_SIZE = 254
+def validate_year(year):
+    if year > timezone.now().year:
+        raise ValidationError(
+            f'Год не может быть больше текущего - '
+            f'{timezone.now().year}, Вы ввели {year}.'
+        )
 
 
 class RoleChoices(str, Enum):
@@ -69,13 +80,48 @@ class User(AbstractUser):
         return self.role == RoleChoices.MODERATOR
 
 
-class Category(BaseCategoryGenreModel):
+class BaseTypologyModel(models.Model):
+    name = models.CharField(
+        max_length=NAME_MAX_LENGTH,
+        verbose_name='Название'
+    )
+    slug = models.SlugField(unique=True, verbose_name='Слаг')
+
+    class Meta:
+        abstract = True
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.slug
+
+
+class BasePostModel(models.Model):
+    text = models.TextField(verbose_name='Текст')
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор',
+        related_name='%(class)s'
+    )
+    pub_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата публикации'
+    )
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.text[:MAX_STR_LENGTH]
+
+
+class Category(BaseTypologyModel):
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(BaseCategoryGenreModel):
+class Genre(BaseTypologyModel):
     class Meta:
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
@@ -83,14 +129,12 @@ class Genre(BaseCategoryGenreModel):
 
 class Title(models.Model):
     name = models.CharField(
-        max_length=settings.NAME_MAX_LENGTH,
+        max_length=NAME_MAX_LENGTH,
         verbose_name='Название'
     )
     year = models.SmallIntegerField(
         verbose_name='Год создания',
-        validators=[
-            CurrentYearMaxValueValidator(
-                message='Год не может быть больше, чем сейчас')]
+        validators=[validate_year]
     )
     description = models.TextField(
         blank=True,
@@ -113,12 +157,13 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
+        ordering = ('-year', 'name',)
 
     def __str__(self):
         return self.name
 
 
-class Review(BaseReviewCommentModel):
+class Review(BasePostModel):
     title = models.ForeignKey(
         'reviews.Title',
         on_delete=models.CASCADE,
@@ -128,12 +173,12 @@ class Review(BaseReviewCommentModel):
     score = models.IntegerField(
         validators=[
             MaxValueValidator(
-                settings.MAX_SCORE,
-                f'Оценка не может быть выше {settings.MAX_SCORE}'
+                MAX_SCORE,
+                f'Оценка не может быть выше {MIN_SCORE}'
             ),
             MinValueValidator(
-                settings.MIN_SCORE,
-                f'Оценка не может быть ниже {settings.MIN_SCORE}'
+                MIN_SCORE,
+                f'Оценка не может быть ниже {MIN_SCORE}'
             )
         ],
         verbose_name='Оценка'
@@ -151,7 +196,7 @@ class Review(BaseReviewCommentModel):
         )
 
 
-class Comment(BaseReviewCommentModel):
+class Comment(BasePostModel):
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,

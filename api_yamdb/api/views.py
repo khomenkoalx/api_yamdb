@@ -1,15 +1,15 @@
 from django.core.mail import send_mail
 from django.db import IntegrityError
-from rest_framework.decorators import api_view, permission_classes
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
-from rest_framework.exceptions import ValidationError
-from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
 from rest_framework import viewsets, permissions
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import SAFE_METHODS
-from django.contrib.auth import get_user_model
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
@@ -19,11 +19,13 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from api_yamdb.settings import ADMIN_EMAIL
 from reviews.models import Category, Genre, Title, Review
+from .base_views import SearchableViewSet
 from .filters import TitleFilter
-from .mixins import SearchableViewSet
-from .permissions import (IsAdminModeratorAuthorOrReadOnly,
-                          IsAdminUserOrReadOnly,
-                          IsAdmin)
+from .permissions import (
+    IsAdminModeratorAuthorOrReadOnly,
+    IsAdminUserOrReadOnly,
+    IsAdmin
+)
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -40,17 +42,21 @@ from .serializers import (
 User = get_user_model()
 
 
-class CategoryViewSet(SearchableViewSet, viewsets.GenericViewSet):
+class CategoryViewSet(SearchableViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(SearchableViewSet, viewsets.GenericViewSet):
+class GenreViewSet(SearchableViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.prefetch_related(
+        'reviews').annotate(
+            rating=Avg('reviews__score')
+    ).order_by('-year', 'name')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminUserOrReadOnly,)
@@ -60,13 +66,6 @@ class TitleViewSet(viewsets.ModelViewSet):
         if self.request.method in SAFE_METHODS:
             return TitleSafeSerializer
         return TitleSerializer
-
-    def get_queryset(self):
-        titles = Title.objects.prefetch_related(
-            'reviews').annotate(
-                rating=Avg('reviews__score')
-        )
-        return titles
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -79,12 +78,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return get_object_or_404(Title, id=self.kwargs['title_id'])
 
     def get_queryset(self):
-        title = self.get_title()
-        return title.reviews.all()
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        title = self.get_title()
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -97,8 +94,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         return get_object_or_404(Review, id=self.kwargs['review_id'])
 
     def get_queryset(self):
-        review = self.get_review()
-        return review.comments.all()
+        return self.get_review().comments.all()
 
     def perform_create(self, serializer):
         review = self.get_review()
