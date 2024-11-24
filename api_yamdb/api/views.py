@@ -7,7 +7,7 @@ from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework import viewsets, permissions
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.filters import SearchFilter
@@ -105,17 +105,10 @@ class CommentViewSet(viewsets.ModelViewSet):
 def signup(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-
-    try:
-        user, created = User.objects.get_or_create(
-            email=serializer.validated_data['email'],
-            username=serializer.validated_data['username']
-        )
-    except IntegrityError:
-        raise ValidationError(
-            {'email or username': 'Пользователь с таким email'
-                                  ' или username уже существует.'}
-        )
+    user, created = User.objects.get_or_create(
+        email=serializer.validated_data['email'],
+        username=serializer.validated_data['username']
+    )
 
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
@@ -157,19 +150,20 @@ class UserViewSet(ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = [IsAdmin]
 
-
-@api_view(['GET', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def me(request):
-    user = request.user
-    if request.method == 'PATCH':
-        serializer = UserMeProfileSerializer(
-            user,
-            data=request.data,
-            partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    if request.method == 'GET':
-        return Response(UserMeProfileSerializer(user).data)
+    @action(detail=False,
+            methods=['get', 'patch'],
+            url_path='me',
+            permission_classes=[IsAuthenticated])
+    def me(self, request):
+        user = request.user
+        if request.method == 'PATCH':
+            serializer = UserMeProfileSerializer(
+                user,
+                data=request.data,
+                partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        if request.method == 'GET':
+            return Response(UserMeProfileSerializer(user).data)

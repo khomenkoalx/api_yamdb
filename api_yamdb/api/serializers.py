@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
@@ -102,43 +104,56 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.Serializer):
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+\Z',
-        max_length=USERNAME_FIELD_SIZE,
-        error_messages={
-            'invalid': 'Недопустимые символы в имени пользователя.'
-        },
-        required=True
+    username = serializers.CharField(
+        required=True,
+        max_length=USERNAME_FIELD_SIZE
     )
     email = serializers.EmailField(
         max_length=EMAIL_FIELD_SIZE,
         required=True
     )
 
-    def validate_username(self, username):
-        if username == settings.MYSELF_NAME:
+    def validate(self, instance):
+        if instance['username'] == settings.MYSELF_NAME:
             raise serializers.ValidationError(
                 f'Имя \'{settings.MYSELF_NAME}\' использовать нельзя.'
             )
-        return username
+        if len(instance['username']) > USERNAME_FIELD_SIZE:
+            raise serializers.ValidationError(
+                f'Имя пользователя не может быть '
+                f'длиннее {USERNAME_FIELD_SIZE} символов.'
+            )
+        if not re.match(r'^[\w.@+-]+\Z', instance['username']):
+            raise serializers.ValidationError(
+                'Имя пользователя должно содержать только буквы, цифры, '
+                'точки, подчеркивания, а также символы @, +, -, и .'
+            )
+        errors = {
+            'username': User.objects.filter(
+                username=instance['username']
+            ).exists(),
+            'email': User.objects.filter(email=instance['email']).exists(),
+        }
+
+        if errors['username'] ^ errors['email']:
+            field = 'username' if errors['username'] else 'email'
+            raise serializers.ValidationError(
+                f"Пользователь с {field} {instance[field]} уже существует."
+            )
+
+        return instance
 
 
 class TokenSerializer(serializers.Serializer):
-    username = serializers.CharField(
+    username = serializers.RegexField(
         max_length=USERNAME_FIELD_SIZE,
+        regex=r'^[\w.@+-]+\Z',
         required=True,
     )
     confirmation_code = serializers.CharField(
         max_length=CONFORMATION_CODE_SIZE,
         required=True,
     )
-
-    def validate_username(self, username):
-        if username == settings.MYSELF_NAME:
-            raise serializers.ValidationError(
-                f'Имя \'{settings.MYSELF_NAME}\' использовать нельзя.'
-            )
-        return username
 
 
 class BaseUserSerializer:

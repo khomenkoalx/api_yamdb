@@ -8,7 +8,6 @@ from .views import (
     CommentViewSet,
     signup,
     get_token,
-    me,
     UserViewSet
 )
 
@@ -29,9 +28,12 @@ v1_router.register(
 )
 v1_router.register(r'users', UserViewSet, basename='users')
 
+auth_urlpatterns = [
+    path('signup/', signup, name='signup'),
+    path('token/', get_token, name='token'),
+]
+
 urlpatterns = [
-    path('v1/users/me/', me, name='me'),
     path('v1/', include(v1_router.urls)),
-    path('v1/auth/signup/', signup, name='signup'),
-    path('v1/auth/token/', get_token, name='token'),
+    path('v1/auth/', include(auth_urlpatterns)),
 ]
