@@ -1,6 +1,6 @@
 from django.core.mail import send_mail
-from django.db import IntegrityError
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
@@ -34,7 +34,6 @@ from .serializers import (
     ReviewSerializer,
     CommentSerializer,
     SignUpSerializer,
-    UserMeProfileSerializer,
     TokenSerializer,
     UserSerializer
 )
@@ -152,18 +151,20 @@ class UserViewSet(ModelViewSet):
 
     @action(detail=False,
             methods=['get', 'patch'],
-            url_path='me',
+            url_path=settings.MYSELF_NAME,
             permission_classes=[IsAuthenticated])
-    def me(self, request):
+    def myself(self, request):
         user = request.user
-        if request.method == 'PATCH':
-            serializer = UserMeProfileSerializer(
+        if request.method == 'GET':
+            return Response(UserSerializer(user).data)
+        else:
+            data = request.data.copy()
+            data.pop('role', None)
+            serializer = UserSerializer(
                 user,
-                data=request.data,
+                data=data,
                 partial=True
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        if request.method == 'GET':
-            return Response(UserMeProfileSerializer(user).data)

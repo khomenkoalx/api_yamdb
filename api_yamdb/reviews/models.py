@@ -1,12 +1,12 @@
 from enum import Enum
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 
 from .constants import (
     USERNAME_FIELD_SIZE,
@@ -26,6 +26,16 @@ def validate_year(year):
         )
 
 
+def validate_myself(username):
+    if username.lower() == settings.MYSELF_NAME:
+        raise ValidationError(
+            f'Имя пользователя не может быть "{settings.MYSELF_NAME}".'
+        )
+
+
+username_validator = RegexValidator(regex=r'^[\w.@+-]+\Z')
+
+
 class RoleChoices(str, Enum):
     USER = 'user'
     MODERATOR = 'moderator'
@@ -34,50 +44,47 @@ class RoleChoices(str, Enum):
     @classmethod
     def choices(cls):
         return [
-            (cls.USER.value, _('user')),
-            (cls.MODERATOR.value, _('moderator')),
-            (cls.ADMIN.value, _('admin')),
+            ('user', 'пользователь'),
+            ('moderator', 'модератор'),
+            ('admin', 'администратор')
         ]
 
     @classmethod
     def max_length(cls):
-        return max(len(role) for role in cls)
+        return max(len(role.value) for role in cls)
 
 
 class User(AbstractUser):
-    username_validator = RegexValidator(
-        regex=r'^[\w.@+-]+\Z',
-        message=(
-            'Username may contain only letters,'
-            ' digits, and @/./+/-/_ characters.'
-        )
-    )
-
     username = models.CharField(
         max_length=USERNAME_FIELD_SIZE,
         unique=True,
-        validators=[username_validator],
-        error_messages={
-            'unique': "A user with that username already exists.",
-        },
+        validators=[username_validator, validate_myself],
+        verbose_name='Имя'
     )
-    email = models.EmailField(unique=True, max_length=EMAIL_FIELD_SIZE)
-    bio = models.TextField(blank=True)
+    email = models.EmailField(
+        unique=True,
+        max_length=EMAIL_FIELD_SIZE,
+        verbose_name='Email')
+    bio = models.TextField(blank=True, verbose_name='Биография')
     role = models.CharField(
         max_length=RoleChoices.max_length(),
         choices=RoleChoices.choices(),
-        default=RoleChoices.USER
+        default=RoleChoices.USER,
+        verbose_name='Роль'
     )
 
     @property
     def is_admin(self):
-        return (self.role == RoleChoices.ADMIN
-                or self.is_superuser
-                or self.is_staff)
+        return self.role == RoleChoices.ADMIN or self.is_superuser
 
     @property
     def is_moderator(self):
         return self.role == RoleChoices.MODERATOR
+
+    class Meta:
+        ordering = ('username',)
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
 
 class BaseTypologyModel(models.Model):
@@ -186,7 +193,6 @@ class Review(BasePostModel):
     )
 
     class Meta:
-        ordering = ('-pub_date',)
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
@@ -206,6 +212,5 @@ class Comment(BasePostModel):
     )
 
     class Meta:
-        ordering = ('pub_date',)
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'

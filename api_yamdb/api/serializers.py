@@ -4,11 +4,18 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from reviews.models import Category, Genre, Title, Review, Comment
-from reviews.models import User, USERNAME_FIELD_SIZE, EMAIL_FIELD_SIZE
-from reviews.constants import TITLE_READ_ONLY_FIELDS
-
-CONFORMATION_CODE_SIZE = 128
+from reviews.constants import TITLE_READ_ONLY_FIELDS, CONFORMATION_CODE_SIZE
+from reviews.models import (
+    Category,
+    Genre,
+    Title,
+    Review,
+    Comment,
+    RoleChoices,
+    User,
+    USERNAME_FIELD_SIZE,
+    EMAIL_FIELD_SIZE
+)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -156,22 +163,12 @@ class TokenSerializer(serializers.Serializer):
     )
 
 
-class BaseUserSerializer:
-    _are_required = False
-    username = serializers.RegexField(
-        regex=r'^[\w.@+-]+\Z',
+class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
         max_length=USERNAME_FIELD_SIZE,
-        required=_are_required,
-        error_messages={
-            'invalid': 'Имя пользователя содержит недопустимые символы.'
-        }
     )
     email = serializers.EmailField(
-        max_length=EMAIL_FIELD_SIZE,
-        required=_are_required,
-        error_messages={
-            'max_length': 'Email не может быть длиннее 254 символов.'
-        }
+        max_length=EMAIL_FIELD_SIZE
     )
 
     class Meta:
@@ -185,11 +182,38 @@ class BaseUserSerializer:
             'role'
         )
 
-
-class UserMeProfileSerializer(serializers.ModelSerializer, BaseUserSerializer):
-    class Meta(BaseUserSerializer.Meta):
-        read_only_fields = ('role',)
-
-
-class UserSerializer(serializers.ModelSerializer, BaseUserSerializer):
-    BaseUserSerializer._are_required = True
+    def validate(self, instance):
+        if instance.get('username'):
+            if instance['username'] == settings.MYSELF_NAME:
+                raise serializers.ValidationError(
+                    f'Имя {settings.MYSELF_NAME} использовать нельзя.'
+                )
+            if len(instance['username']) > USERNAME_FIELD_SIZE:
+                raise serializers.ValidationError(
+                    f'Имя пользователя не может быть '
+                    f'длиннее {USERNAME_FIELD_SIZE} символов.'
+                )
+            if not re.match(r'^[\w.@+-]+\Z', instance['username']):
+                raise serializers.ValidationError(
+                    'Имя пользователя должно содержать только буквы, цифры, '
+                    'точки, подчеркивания, а также символы @, +, -, и .'
+                )
+        if instance.get('email'):
+            if User.objects.filter(email=instance['email']).exists():
+                raise serializers.ValidationError(
+                    f'Пользователь с email {instance["email"]} уже существует.'
+                )
+        if instance.get('username'):
+            if User.objects.filter(username=instance['username']).exists():
+                raise serializers.ValidationError(
+                    f'Пользователь с именем {instance["username"]} '
+                    f'уже существует.'
+                )
+        if instance.get('role') and instance['role'] not in (
+            [role[0] for role in RoleChoices.choices()]
+        ):
+            raise serializers.ValidationError(
+                f'Указанное {instance["role"]} для поля '
+                f'"role" не является допустимым.'
+            )
+        return instance
