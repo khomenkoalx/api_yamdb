@@ -24,16 +24,15 @@ def validate_year(year):
             f'Год не может быть больше текущего - '
             f'{timezone.now().year}, Вы ввели {year}.'
         )
+    return year
 
 
 def validate_myself(username):
-    if username.lower() == settings.MYSELF_NAME:
+    if username == settings.MYSELF_NAME:
         raise ValidationError(
             f'Имя пользователя не может быть "{settings.MYSELF_NAME}".'
         )
-
-
-username_validator = RegexValidator(regex=r'^[\w.@+-]+\Z')
+    return username
 
 
 class RoleChoices(str, Enum):
@@ -58,8 +57,8 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=USERNAME_FIELD_SIZE,
         unique=True,
-        validators=[username_validator, validate_myself],
-        verbose_name='Имя'
+        validators=[RegexValidator(regex=r'^[\w.@+-]+\Z'), validate_myself],
+        verbose_name='Имя пользователя'
     )
     email = models.EmailField(
         unique=True,
@@ -86,8 +85,11 @@ class User(AbstractUser):
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
+    def __str__(self):
+        return self.username
 
-class BaseTypologyModel(models.Model):
+
+class BaseNameSlugModel(models.Model):
     name = models.CharField(
         max_length=NAME_MAX_LENGTH,
         verbose_name='Название'
@@ -96,7 +98,7 @@ class BaseTypologyModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('name',)
+        ordering = ('-name',)
 
     def __str__(self):
         return self.slug
@@ -108,7 +110,7 @@ class BasePostModel(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор',
-        related_name='%(class)s'
+        related_name='%(class)ss'
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
@@ -123,14 +125,14 @@ class BasePostModel(models.Model):
         return self.text[:MAX_STR_LENGTH]
 
 
-class Category(BaseTypologyModel):
-    class Meta:
+class Category(BaseNameSlugModel):
+    class Meta(BaseNameSlugModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(BaseTypologyModel):
-    class Meta:
+class Genre(BaseNameSlugModel):
+    class Meta(BaseNameSlugModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
@@ -165,15 +167,15 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
-        ordering = ('-year', 'name',)
+        ordering = ('-year', '-name',)
 
     def __str__(self):
-        return self.name
+        return f'Произведение {self.name[:MAX_STR_LENGTH]}, {self.year} года.'
 
 
 class Review(BasePostModel):
     title = models.ForeignKey(
-        'reviews.Title',
+        Title,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='Произведение'
@@ -192,7 +194,7 @@ class Review(BasePostModel):
         verbose_name='Оценка'
     )
 
-    class Meta:
+    class Meta(BasePostModel.Meta):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
@@ -211,6 +213,6 @@ class Comment(BasePostModel):
         verbose_name='Отзыв'
     )
 
-    class Meta:
+    class Meta(BasePostModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'

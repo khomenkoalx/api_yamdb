@@ -1,17 +1,17 @@
 import re
 
 from django.conf import settings
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from reviews.constants import TITLE_READ_ONLY_FIELDS, CONFORMATION_CODE_SIZE
+from reviews.constants import CONFORMATION_CODE_SIZE
 from reviews.models import (
     Category,
     Genre,
     Title,
     Review,
     Comment,
-    RoleChoices,
     User,
     USERNAME_FIELD_SIZE,
     EMAIL_FIELD_SIZE
@@ -33,12 +33,20 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleSafeSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
-    rating = serializers.ReadOnlyField()
+    rating = serializers.FloatField(read_only=True)
 
     class Meta:
         model = Title
-        fields = TITLE_READ_ONLY_FIELDS
-        read_only_fields = TITLE_READ_ONLY_FIELDS
+        fields = (
+            'id',
+            'name',
+            'year',
+            'rating',
+            'description',
+            'genre',
+            'category'
+        )
+        read_only_fields = fields
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -53,10 +61,7 @@ class TitleSerializer(serializers.ModelSerializer):
     )
 
     def to_representation(self, instance):
-        if instance:
-            serializer = TitleSafeSerializer(instance)
-            return serializer.data
-        return {}
+        return TitleSafeSerializer(instance).data
 
     class Meta:
         model = Title
@@ -82,13 +87,17 @@ class ReviewSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if self.context['request'].method != 'POST':
             return data
-
         author = self.context['request'].user
         title_id = self.context['request'].parser_context['kwargs']['title_id']
-
-        title = get_object_or_404(Title, id=title_id)
-
-        if title.reviews.filter(author=author).exists():
+        title = get_object_or_404(
+            Title.objects.prefetch_related(
+                Prefetch(
+                    'reviews',
+                    queryset=Review.objects.filter(author=author)
+                )
+            ).filter(id=title_id)
+        )
+        if title.reviews.exists():
             raise serializers.ValidationError(
                 f'Отзыв на произведение "{title.name}" уже существует'
             )
@@ -164,12 +173,6 @@ class TokenSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=USERNAME_FIELD_SIZE,
-    )
-    email = serializers.EmailField(
-        max_length=EMAIL_FIELD_SIZE
-    )
 
     class Meta:
         model = User
@@ -184,36 +187,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate(self, instance):
         if instance.get('username'):
-            if instance['username'] == settings.MYSELF_NAME:
-                raise serializers.ValidationError(
-                    f'Имя {settings.MYSELF_NAME} использовать нельзя.'
-                )
-            if len(instance['username']) > USERNAME_FIELD_SIZE:
-                raise serializers.ValidationError(
-                    f'Имя пользователя не может быть '
-                    f'длиннее {USERNAME_FIELD_SIZE} символов.'
-                )
             if not re.match(r'^[\w.@+-]+\Z', instance['username']):
                 raise serializers.ValidationError(
                     'Имя пользователя должно содержать только буквы, цифры, '
                     'точки, подчеркивания, а также символы @, +, -, и .'
                 )
-        if instance.get('email'):
-            if User.objects.filter(email=instance['email']).exists():
-                raise serializers.ValidationError(
-                    f'Пользователь с email {instance["email"]} уже существует.'
-                )
-        if instance.get('username'):
-            if User.objects.filter(username=instance['username']).exists():
-                raise serializers.ValidationError(
-                    f'Пользователь с именем {instance["username"]} '
-                    f'уже существует.'
-                )
-        if instance.get('role') and instance['role'] not in (
-            [role[0] for role in RoleChoices.choices()]
-        ):
-            raise serializers.ValidationError(
-                f'Указанное {instance["role"]} для поля '
-                f'"role" не является допустимым.'
-            )
         return instance

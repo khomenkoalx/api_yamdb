@@ -1,9 +1,9 @@
-from django.core.mail import send_mail
-from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
-from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework import viewsets, permissions
@@ -55,7 +55,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.prefetch_related(
         'reviews').annotate(
             rating=Avg('reviews__score')
-    ).order_by('-year', 'name')
+    ).order_by(*Title._meta.ordering)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminUserOrReadOnly,)
@@ -157,14 +157,14 @@ class UserViewSet(ModelViewSet):
         user = request.user
         if request.method == 'GET':
             return Response(UserSerializer(user).data)
-        else:
-            data = request.data.copy()
-            data.pop('role', None)
-            serializer = UserSerializer(
-                user,
-                data=data,
-                partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        data = request.data.copy()
+        data.pop('role', None)
+        serializer = UserSerializer(
+            user,
+            data=data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
