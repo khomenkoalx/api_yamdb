@@ -138,5 +138,6 @@ MAX_SCORE = 10
 MAX_STR_LENGTH = 15
 NAME_MAX_LENGTH = 255
 MYSELF_NAME = 'me'
+USERNAME_REGEX = r'^[\w.@+-]+\Z'
 
 ADMIN_EMAIL = 'admin@yamdb.com'

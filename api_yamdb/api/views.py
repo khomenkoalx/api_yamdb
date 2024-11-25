@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import IntegrityError
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
@@ -104,19 +105,27 @@ class CommentViewSet(viewsets.ModelViewSet):
 def signup(request):
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    user, created = User.objects.get_or_create(
-        email=serializer.validated_data['email'],
-        username=serializer.validated_data['username']
-    )
+    try:
+        user, created = User.objects.get_or_create(
+            email=serializer.validated_data['email'],
+            username=serializer.validated_data['username']
+        )
+    except IntegrityError:
+        raise ValidationError({
+            "detail": "Ошибка создания пользователя"
+        })
 
-    confirmation_code = default_token_generator.make_token(user)
-    send_mail(
-        'Код подтверждения',
-        f'Ваш код подтверждения: {confirmation_code}',
-        ADMIN_EMAIL,
-        [user.email],
-        fail_silently=False,
-    )
+    try:
+        confirmation_code = default_token_generator.make_token(user)
+        send_mail(
+            'Код подтверждения',
+            f'Ваш код подтверждения: {confirmation_code}',
+            ADMIN_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+    except Exception as ex:
+        raise ValidationError(f'While sending email {ex} was raised')
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

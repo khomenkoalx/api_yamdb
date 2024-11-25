@@ -57,7 +57,10 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=USERNAME_FIELD_SIZE,
         unique=True,
-        validators=[RegexValidator(regex=r'^[\w.@+-]+\Z'), validate_myself],
+        validators=[
+            RegexValidator(regex=settings.USERNAME_REGEX),
+            validate_myself
+        ],
         verbose_name='Имя пользователя'
     )
     email = models.EmailField(

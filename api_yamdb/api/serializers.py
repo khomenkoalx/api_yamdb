@@ -1,5 +1,3 @@
-import re
-
 from django.conf import settings
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
@@ -16,6 +14,7 @@ from reviews.models import (
     USERNAME_FIELD_SIZE,
     EMAIL_FIELD_SIZE
 )
+from api.utils import is_valid_user
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -129,41 +128,27 @@ class SignUpSerializer(serializers.Serializer):
         required=True
     )
 
-    def validate(self, instance):
-        if instance['username'] == settings.MYSELF_NAME:
+    def validate(self, user):
+        is_valid_user(user.get('username'))
+        find_user = User.objects.filter(email=user['email'])
+        if (find_user.exists()
+                and find_user.all().first().username != user['username']):
             raise serializers.ValidationError(
-                f'Имя \'{settings.MYSELF_NAME}\' использовать нельзя.'
+                {"email": "Пользователь с таким email уже существует."}
             )
-        if len(instance['username']) > USERNAME_FIELD_SIZE:
+        find_user = User.objects.filter(username=user['username'])
+        if (find_user.exists()
+                and find_user.all().first().email != user['email']):
             raise serializers.ValidationError(
-                f'Имя пользователя не может быть '
-                f'длиннее {USERNAME_FIELD_SIZE} символов.'
+                {"username": "Пользователь с таким username уже существует."}
             )
-        if not re.match(r'^[\w.@+-]+\Z', instance['username']):
-            raise serializers.ValidationError(
-                'Имя пользователя должно содержать только буквы, цифры, '
-                'точки, подчеркивания, а также символы @, +, -, и .'
-            )
-        errors = {
-            'username': User.objects.filter(
-                username=instance['username']
-            ).exists(),
-            'email': User.objects.filter(email=instance['email']).exists(),
-        }
-
-        if errors['username'] ^ errors['email']:
-            field = 'username' if errors['username'] else 'email'
-            raise serializers.ValidationError(
-                f"Пользователь с {field} {instance[field]} уже существует."
-            )
-
-        return instance
+        return user
 
 
 class TokenSerializer(serializers.Serializer):
     username = serializers.RegexField(
         max_length=USERNAME_FIELD_SIZE,
-        regex=r'^[\w.@+-]+\Z',
+        regex=settings.USERNAME_REGEX,
         required=True,
     )
     confirmation_code = serializers.CharField(
@@ -185,11 +170,8 @@ class UserSerializer(serializers.ModelSerializer):
             'role'
         )
 
-    def validate(self, instance):
-        if instance.get('username'):
-            if not re.match(r'^[\w.@+-]+\Z', instance['username']):
-                raise serializers.ValidationError(
-                    'Имя пользователя должно содержать только буквы, цифры, '
-                    'точки, подчеркивания, а также символы @, +, -, и .'
-                )
-        return instance
+    def validate(self, user):
+        username = user.get('username')
+        if username:
+            is_valid_user(username)
+        return user
