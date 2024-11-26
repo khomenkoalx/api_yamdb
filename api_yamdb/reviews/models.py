@@ -1,9 +1,8 @@
 from enum import Enum
-
+import re
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
@@ -27,12 +26,21 @@ def validate_year(year):
     return year
 
 
-def validate_myself(username):
+def is_valid_username(username: str):
     if username == settings.MYSELF_NAME:
         raise ValidationError(
-            f'Имя пользователя не может быть "{settings.MYSELF_NAME}".'
+            f'Имя \'{settings.MYSELF_NAME}\' использовать нельзя.'
         )
-    return username
+    if not re.match(settings.USERNAME_REGEX, username):
+        invalid_characters = re.findall(
+            f'[^{settings.USERNAME_REGEX}]',
+            username
+        )
+        invalid_symbols = ', '.join(set(invalid_characters))
+        raise ValidationError(
+            f'Поле username содержит недопустимые '
+            f'символы: {invalid_symbols}.'
+        )
 
 
 class RoleChoices(str, Enum):
@@ -58,10 +66,9 @@ class User(AbstractUser):
         max_length=USERNAME_FIELD_SIZE,
         unique=True,
         validators=[
-            RegexValidator(regex=settings.USERNAME_REGEX),
-            validate_myself
+            is_valid_username
         ],
-        verbose_name='Имя пользователя'
+        verbose_name='Псевдоним'
     )
     email = models.EmailField(
         unique=True,
@@ -101,7 +108,7 @@ class BaseNameSlugModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('-name',)
+        ordering = ('name',)
 
     def __str__(self):
         return self.slug
@@ -170,7 +177,7 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
-        ordering = ('-year', '-name',)
+        ordering = ('-year', 'name',)
 
     def __str__(self):
         return f'Произведение {self.name[:MAX_STR_LENGTH]}, {self.year} года.'

@@ -111,21 +111,21 @@ def signup(request):
             username=serializer.validated_data['username']
         )
     except IntegrityError:
-        raise ValidationError({
-            "detail": "Ошибка создания пользователя"
-        })
+        username = serializer.validated_data['username']
+        repeated_username = User.objects.filter(username=username).exists()
+        if repeated_username:
+            raise ValidationError('Такой username уже существует')
+        else:
+            raise ValidationError('Такой email уже существует')
 
-    try:
-        confirmation_code = default_token_generator.make_token(user)
-        send_mail(
-            'Код подтверждения',
-            f'Ваш код подтверждения: {confirmation_code}',
-            ADMIN_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
-    except Exception as ex:
-        raise ValidationError(f'While sending email {ex} was raised')
+    confirmation_code = default_token_generator.make_token(user)
+    send_mail(
+        'Код подтверждения',
+        f'Ваш код подтверждения: {confirmation_code}',
+        ADMIN_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -133,15 +133,11 @@ def signup(request):
 def get_token(request):
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-
     username = serializer.validated_data['username']
     confirmation_code = serializer.validated_data['confirmation_code']
-
     user = get_object_or_404(User, username=username)
-
     if not default_token_generator.check_token(user, confirmation_code):
         raise ValidationError({"detail": "Неверный код подтверждения"})
-
     access_token = AccessToken.for_user(user)
     return Response({
         'access': str(access_token),
