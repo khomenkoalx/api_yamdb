@@ -1,5 +1,5 @@
 from enum import Enum
-import re
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -13,7 +13,8 @@ from .constants import (
     MIN_SCORE,
     MAX_SCORE,
     MAX_STR_LENGTH,
-    NAME_MAX_LENGTH
+    NAME_MAX_LENGTH,
+    USERNAME_NOT_ALLOWED_REGEX
 )
 
 
@@ -21,7 +22,7 @@ def validate_year(year):
     if year > timezone.now().year:
         raise ValidationError(
             f'Год не может быть больше текущего - '
-            f'{timezone.now().year}, Вы ввели {year}.'
+            f'{timezone.now().year}'
         )
     return year
 
@@ -31,15 +32,13 @@ def is_valid_username(username: str):
         raise ValidationError(
             f'Имя \'{settings.MYSELF_NAME}\' использовать нельзя.'
         )
-    if not re.match(settings.USERNAME_REGEX, username):
-        invalid_characters = re.findall(
-            f'[^{settings.USERNAME_REGEX}]',
-            username
-        )
-        invalid_symbols = ', '.join(set(invalid_characters))
+    invalid_characters = ''.join(
+        set(USERNAME_NOT_ALLOWED_REGEX.findall(username))
+    )
+    if invalid_characters:
         raise ValidationError(
             f'Поле username содержит недопустимые '
-            f'символы: {invalid_symbols}.'
+            f'символы ({invalid_characters})'
         )
 
 
@@ -48,12 +47,12 @@ class RoleChoices(str, Enum):
     MODERATOR = 'moderator'
     ADMIN = 'admin'
 
-    @classmethod
-    def choices(cls):
+    @staticmethod
+    def choices():
         return [
-            ('user', 'пользователь'),
-            ('moderator', 'модератор'),
-            ('admin', 'администратор')
+            (RoleChoices.USER.value, 'пользователь'),
+            (RoleChoices.MODERATOR.value, 'модератор'),
+            (RoleChoices.ADMIN.value, 'администратор')
         ]
 
     @classmethod

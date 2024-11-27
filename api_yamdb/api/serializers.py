@@ -122,9 +122,7 @@ class SignUpSerializer(serializers.Serializer):
 
 
 class TokenSerializer(serializers.Serializer):
-    username = serializers.RegexField(
-        max_length=USERNAME_FIELD_SIZE,
-        regex=settings.USERNAME_REGEX,
+    username = serializers.CharField(
         required=True,
         validators=[is_valid_username]
     )
@@ -146,3 +144,7 @@ class UserSerializer(serializers.ModelSerializer):
             'bio',
             'role'
         )
+
+    def validate_username(self, username):
+        is_valid_username(username)
+        return username

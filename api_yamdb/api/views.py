@@ -113,11 +113,11 @@ def signup(request):
     except IntegrityError:
         username = serializer.validated_data['username']
         repeated_username = User.objects.filter(username=username).exists()
-        if repeated_username:
-            raise ValidationError('Такой username уже существует')
-        else:
-            raise ValidationError('Такой email уже существует')
-
+        raise ValidationError(
+            'Такой {} уже существует'.format(
+                'username' if repeated_username else 'email'
+            )
+        )
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
         'Код подтверждения',
