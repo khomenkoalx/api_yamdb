@@ -1,9 +1,7 @@
 from django.conf import settings
-from django.db.models import Prefetch
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from reviews.constants import CONFORMATION_CODE_SIZE
+from .constants import CONFIRMATION_CODE_SIZE
 from reviews.models import (
     Category,
     Genre,
@@ -12,9 +10,9 @@ from reviews.models import (
     Comment,
     User,
     USERNAME_FIELD_SIZE,
-    EMAIL_FIELD_SIZE
+    EMAIL_FIELD_SIZE,
+    is_valid_username
 )
-from api.utils import is_valid_user
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -32,7 +30,7 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleSafeSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
-    rating = serializers.FloatField(read_only=True)
+    rating = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Title
@@ -88,17 +86,10 @@ class ReviewSerializer(serializers.ModelSerializer):
             return data
         author = self.context['request'].user
         title_id = self.context['request'].parser_context['kwargs']['title_id']
-        title = get_object_or_404(
-            Title.objects.prefetch_related(
-                Prefetch(
-                    'reviews',
-                    queryset=Review.objects.filter(author=author)
-                )
-            ).filter(id=title_id)
-        )
-        if title.reviews.exists():
+        if Review.objects.filter(title_id=title_id, author=author).exists():
             raise serializers.ValidationError(
-                f'Отзыв на произведение "{title.name}" уже существует'
+                f'Отзыв на произведение '
+                f'\'{Title.objects.get(id=title_id).name}\'уже существует'
             )
         return data
 
@@ -121,28 +112,13 @@ class CommentSerializer(serializers.ModelSerializer):
 class SignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
-        max_length=USERNAME_FIELD_SIZE
+        max_length=USERNAME_FIELD_SIZE,
+        validators=[is_valid_username]
     )
     email = serializers.EmailField(
         max_length=EMAIL_FIELD_SIZE,
         required=True
     )
-
-    def validate(self, user):
-        is_valid_user(user.get('username'))
-        find_user = User.objects.filter(email=user['email'])
-        if (find_user.exists()
-                and find_user.all().first().username != user['username']):
-            raise serializers.ValidationError(
-                {"email": "Пользователь с таким email уже существует."}
-            )
-        find_user = User.objects.filter(username=user['username'])
-        if (find_user.exists()
-                and find_user.all().first().email != user['email']):
-            raise serializers.ValidationError(
-                {"username": "Пользователь с таким username уже существует."}
-            )
-        return user
 
 
 class TokenSerializer(serializers.Serializer):
@@ -150,9 +126,10 @@ class TokenSerializer(serializers.Serializer):
         max_length=USERNAME_FIELD_SIZE,
         regex=settings.USERNAME_REGEX,
         required=True,
+        validators=[is_valid_username]
     )
     confirmation_code = serializers.CharField(
-        max_length=CONFORMATION_CODE_SIZE,
+        max_length=CONFIRMATION_CODE_SIZE,
         required=True,
     )
 
@@ -169,9 +146,3 @@ class UserSerializer(serializers.ModelSerializer):
             'bio',
             'role'
         )
-
-    def validate(self, user):
-        username = user.get('username')
-        if username:
-            is_valid_user(username)
-        return user
