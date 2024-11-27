@@ -146,9 +146,3 @@ class UserSerializer(serializers.ModelSerializer):
             'bio',
             'role'
         )
-
-    def validate(self, user):
-        if 'username' in user:
-            username = user['username']
-            is_valid_username(username)
-        return user
